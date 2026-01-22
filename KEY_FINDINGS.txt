@@ -1,0 +1,422 @@
+================================================================================
+CAS PREDICTIVE MODELING CASE STUDY - INTERNAL ANALYSIS SUMMARY
+================================================================================
+
+This document summarizes findings from the student renters insurance dataset 
+analysis. All conclusions are limited to the observed data and may not 
+generalize beyond this portfolio.
+
+CORE CONCLUSIONS:
+- Claim frequency dominates expected loss across all tiers
+- Greek affiliation and housing status are the strongest risk differentiators
+- Severity contributes less to tier separation than frequency
+- A GLM-based frequency/severity decomposition is sufficient for portfolio-level pricing
+- Further model complexity yields diminishing returns
+
+================================================================================
+DATA STRUCTURE
+================================================================================
+
+Portfolio Composition:
+  • 40,071 student exposures
+  • 4.54% observed claim frequency
+  • 95.5% of exposures report zero claims
+  • Among claimants: mean severity $4,681, median $1,643
+  • Maximum observed loss: $116,563
+
+Distribution Characteristics:
+  • Strongly zero-inflated structure
+  • Right-skewed severity distribution among claimants
+  • Heavy tail present but relatively few extreme values
+
+Modeling Boundary:
+  • Single-model approaches (excluding Tweedie) are inappropriate
+  • Two-part frequency-severity framework is sufficient
+  • Severity is modeled only to estimate conditional mean for EL computation, 
+    not for individual claim prediction
+  • Claim amounts exhibit heavy right tails with limited separability across 
+    covariates; severity modeling beyond conditional mean is unlikely to 
+    improve portfolio-level EL
+
+================================================================================
+MATERIAL RISK FACTORS
+================================================================================
+
+TIER-1 SIGNALS (must anchor risk tier construction):
+
+These signals show consistent and material lift in claim frequency and 
+expected loss. They should anchor primary segmentation.
+
+Greek Organization Membership:
+  • Greek: 7.92% claim rate, $560 mean loss per exposure
+  • Non-Greek: 3.71% claim rate, $127 mean loss per exposure
+  • Expected loss differential: 4-5×
+  • Largest and most stable signal in the dataset
+  • Affects both frequency and severity
+  • Effect persists in multivariate models
+
+Housing Location:
+  • Off-campus: 5.32% claim rate, $335 mean loss per exposure
+  • On-campus: 4.12% claim rate, $147 mean loss per exposure
+  • Expected loss differential: 2-2.5×
+  • Effect partially overlaps with sprinkler presence
+
+Coverage Type:
+  • Personal Property: 9.68% claim rate
+  • Guest Medical: 2.33% claim rate
+  • 4× variation across coverage types
+  • This is a contract structure variable, not a student risk characteristic
+  • Should be addressed in base rate, not in risk tier construction
+
+TIER-2 SIGNALS (secondary adjustments):
+
+These signals exhibit monotonic but modest effects and are suitable for 
+secondary adjustments rather than primary segmentation.
+
+Sprinkler System Presence:
+  • No sprinklers: 4.66% claim rate, $300 mean loss per exposure
+  • With sprinklers: 4.49% claim rate, $176 mean loss per exposure
+  • Expected loss differential: 1.7×
+  • Effect driven more by severity than frequency
+  • Likely reflects building quality/age proxy
+
+Class Year:
+  • Freshmen: 5.08% claim rate (highest)
+  • Graduate students: 3.94% claim rate (lowest)
+  • Progressive decrease with seniority
+  • Effect size is small, may reflect housing patterns
+
+Academic Performance (GPA):
+  • Bottom quintile: 4.99% claim rate
+  • Top quintile: 3.91% claim rate
+  • Frequency differential: 1.3×
+  • Inverse relationship between GPA and claim frequency
+  • Using GPA in pricing may have regulatory considerations
+
+Distance to Campus:
+  • >2.2 miles: 5.57% claim rate
+  • ≤2.2 miles: 4.28% claim rate
+  • Frequency differential: 1.3×
+  • Confounded with off-campus housing
+
+NON-SIGNALS / CONTROL:
+
+Remaining covariates show limited incremental explanatory power after 
+conditioning on Tier-1 factors.
+
+Variables Excluded:
+  • Student name: Pure noise
+  • Claim ID: Post-claim leakage variable
+  • Gender: No material effect after controlling for housing and Greek status
+
+================================================================================
+MODELING APPROACH
+================================================================================
+
+Framework: Two-Part Frequency × Severity
+
+Frequency Model:
+  • Logistic regression on claim occurrence
+  • Features: Greek, housing location, sprinklers, GPA, distance
+  • Predicted mean frequency: 4.54% (matches observed)
+  
+Severity Model:
+  • Gamma GLM with log link (conditional on claim)
+  • Same feature set as frequency model
+  • Predicted conditional mean: $4,685 vs. observed $4,681
+  
+Expected Loss Calculation:
+  • EL = P(claim) × E(amount | claim)
+  • Range: $0 to $4,686 across exposures
+  • Portfolio-level calibration: predicted $210.84 vs. actual $212.49 (0.8% diff)
+  • Decile-level R²: 0.98
+
+Calibration saturates at decile level, suggesting diminishing returns from 
+additional model complexity. Further gains are likely to be noise-fitting 
+rather than risk separation.
+
+Model Selection Rationale:
+
+GLM is sufficient:
+  • Logistic + Gamma GLM is interpretable and actuarially standard
+  • Regulatory acceptance is higher for explainable models
+  • Premium adjustments can be justified factor-by-factor
+  • Portfolio-level calibration is adequate
+
+Alternative approaches not pursued:
+  • ML models (GBM, neural nets): Would improve individual-level prediction 
+    marginally but complicate regulatory justification without materially 
+    improving pricing segmentation
+  • Individual claim amount prediction: High inherent variance; severity 
+    modeling beyond conditional mean is unlikely to improve portfolio-level EL
+  • Fine-grained segmentation: Risk of overfitting to sample noise
+  • Credibility adjustments: Sample sizes are adequate for Tier-1 factors
+
+================================================================================
+RISK STRATIFICATION
+================================================================================
+
+Three-Tier System (Based on Expected Loss):
+
+Tier Definitions:
+  • Low Risk: Bottom 30% of predicted expected loss
+  • Medium Risk: 50th-80th percentile
+  • High Risk: Top 20%
+
+Observed Performance:
+  • Low Risk: $73 mean actual loss, 3.3% claim rate (n=12,024)
+  • Medium Risk: $158 mean actual loss, 4.0% claim rate (n=20,034)
+  • High Risk: $559 mean actual loss, 7.7% claim rate (n=8,013)
+
+Tier Separation:
+  • High / Low ratio: approximately 7.7× on actual loss
+  • This suggests that risk concentration is substantial, at least within 
+    this dataset
+
+High Risk Tier Decomposition:
+
+Within the top 20%, risk is driven by frequency rather than severity:
+  • High Frequency subgroup (top quartile of predicted frequency): 
+    $964 mean actual loss, 9% claim rate
+  • High Severity subgroup (high predicted severity but lower frequency): 
+    $421 mean actual loss, 7% claim rate
+  
+Key Insight:
+  • High risk is primarily driven by elevated claim frequency rather than 
+    extreme severity
+  • Frequency-based segmentation captures the majority of loss differentiation
+  • Severity refinement yields limited marginal benefit for tier separation
+  • This supports pricing and intervention strategies focused on prevention 
+    rather than loss cap optimization
+
+Calibration Assessment:
+  • Decile-level R² = 0.98 indicates calibration saturates at portfolio level
+  • Individual-level predictions have high variance (expected for severity)
+  • No systematic bias observed across risk levels
+  • Current signals already saturate predictive power
+
+================================================================================
+PRICING IMPLICATIONS
+================================================================================
+
+Recommended Structure:
+
+The analysis suggests that a three-tier pricing approach is sufficient to 
+capture the majority of observable risk variation. More granular segmentation 
+is unlikely to be stable or defensible.
+
+Tier-Based Loadings:
+  • Low Risk (30%): Base rate
+  • Medium Risk (50%): Base + 15-25%
+  • High Risk (20%): Base + 100-150%
+
+Factor-Based Adjustments (Indicative):
+  • Greek membership: +75-100%
+  • Off-campus + no sprinklers: +50-75%
+  • Distance >5 miles: +20-30%
+  • Low GPA (<2.0): +25-30%
+
+Factor-Based Credits:
+  • On-campus housing: -15-20%
+  • High GPA (>3.5): -10-15%
+  • Sprinklered building: -8-12%
+
+Notes on Implementation:
+  • Final loadings should reflect business judgment and competitive position
+  • Above figures are actuarially indicated but not prescriptive
+  • Regulatory review may require adjustment of certain factors (particularly GPA)
+  • Greek organization pricing may face scrutiny; be prepared to justify with data
+
+Coverage Type Considerations:
+  • Personal Property shows high frequency but low severity
+  • This should be addressed through coverage-specific base rates, not risk tiers
+  • Consider separate rating for each coverage type
+
+================================================================================
+EXPECTED BUSINESS IMPACT (ESTIMATES)
+================================================================================
+
+Loss Ratio Impact:
+  • Current flat pricing: All students pay average rate
+  • With risk-based pricing: Low-risk students pay less, high-risk pay more
+  • Estimated improvement: 15-25 percentage points on loss ratio
+  • Assumes portfolio composition remains stable (conservative)
+
+Portfolio Composition Risk:
+  • If competitors do not follow risk-based pricing, we may retain more 
+    high-risk students than modeled
+  • If competitors match our pricing, portfolio mix should improve
+  • Recommend monitoring actual vs. expected mix quarterly
+
+Market Position:
+  • Pricing should be competitive for approximately 70-80% of student market
+  • May lose market share in high-risk segments (this is acceptable)
+  • Consider whether to actively limit high-risk exposure through underwriting
+
+Adverse Selection Considerations:
+  • Current flat pricing likely attracts high-risk students disproportionately
+  • Risk-based pricing should reduce this effect
+  • Magnitude depends on competitive environment
+
+================================================================================
+LIMITATIONS AND UNCERTAINTIES
+================================================================================
+
+Data Limitations:
+  • Single-year snapshot; no claim development or multi-year patterns
+  • Limited information on building characteristics beyond sprinklers
+  • No data on policy limits, deductibles, or coverage elections
+  • Greek organization is binary; no chapter-level detail
+
+Model Limitations:
+  • Severity model uses group-level conditional means; individual predictions 
+    have high variance
+  • No credibility weighting applied (assumes all segments have sufficient volume)
+  • Model does not account for potential changes in student behavior in 
+    response to pricing
+
+External Validity:
+  • Results are specific to this portfolio
+  • Different schools or regions may show different patterns
+  • Greek organization risk may vary by institution
+
+Regulatory Considerations:
+  • Use of GPA in pricing may require regulatory approval in some jurisdictions
+  • Greek affiliation pricing should be documented as based on loss experience, 
+    not stereotype
+  • All factors should be demonstrably related to loss experience
+
+================================================================================
+IMPLEMENTATION RECOMMENDATIONS
+================================================================================
+
+Phase 1 - Immediate (0-3 months):
+  1. Implement three-tier pricing structure
+  2. Apply Greek/housing/sprinkler adjustments
+  3. Train underwriting and pricing teams on new approach
+  4. Prepare regulatory filing documentation
+
+Phase 2 - Short-term (3-6 months):
+  4. Monitor tier performance monthly
+  5. Track actual vs. predicted loss ratios by tier
+  6. Validate that portfolio composition is within expected range
+  7. Collect feedback from underwriters on edge cases
+
+Phase 3 - Medium-term (6-12 months):
+  8. Evaluate whether GPA and distance factors should be incorporated
+  9. Consider whether tier thresholds should be adjusted
+  10. Assess competitive response and adjust if needed
+  11. Expand data collection for future model refinement
+
+Ongoing Monitoring:
+  • Annual re-rating for dynamic factors (GPA, housing, Greek status)
+  • Quarterly portfolio composition reporting
+  • Track emergence patterns to validate one-year assumptions
+
+Data Collection Priorities:
+  • Claim development patterns beyond one year
+  • Building age and construction type
+  • Greek organization chapter-level data
+  • Prior claims history for renewal pricing
+
+================================================================================
+REGULATORY JUSTIFICATION
+================================================================================
+
+Anticipated Questions and Responses:
+
+Q: Why charge Greek students more?
+A: Greek-affiliated students in this portfolio exhibit materially higher loss 
+   experience (4-5× expected loss) based on observed data. The differential 
+   persists after controlling for other factors. Pricing reflects actual loss 
+   experience, not assumptions about behavior.
+
+Q: Is GPA pricing discriminatory?
+A: GPA is inversely correlated with loss experience in this dataset. However, 
+   we acknowledge this factor may raise regulatory concerns. We can price 
+   effectively without it using other factors (Greek, housing, sprinklers).
+
+Q: How do you justify the High Risk tier paying 2× the Low Risk tier?
+A: High Risk tier students experience approximately 7-8× higher actual losses 
+   in this data. The 2× pricing differential is conservative relative to 
+   indicated pure premium differences.
+
+Q: What prevents students from gaming the system?
+A: Primary rating factors (Greek membership, housing location, building 
+   characteristics) are not easily manipulated. Students make these decisions 
+   based on social and academic considerations, not insurance pricing. Annual 
+   re-rating captures changes.
+
+Q: Why not use machine learning models?
+A: GLM framework provides transparency and interpretability required for 
+   regulatory filing. More complex models would marginally improve individual-
+   level predictions but would not materially change pricing segmentation. 
+   Portfolio-level calibration is sufficient for pricing purposes.
+
+Documentation Requirements:
+  • Full univariate analysis for each rating factor
+  • Multivariate model coefficients and standard errors
+  • Validation of tier separation on actual data
+  • Comparison of predicted vs. actual by segment
+  • Regulatory rate filing template with justifications
+
+================================================================================
+ALTERNATIVE APPROACHES CONSIDERED
+================================================================================
+
+What We Did Not Do (And Why):
+
+1. Individual Claim Amount Prediction
+   • Not pursued because severity has inherently high variance
+   • Portfolio-level expected value is sufficient for pricing
+   • Individual predictions would not be credible
+
+2. Fine-Grained Segmentation (>3 tiers)
+   • Risk of overfitting to sample-specific patterns
+   • Regulatory filing complexity increases
+   • Marginal improvement in pricing accuracy not worth trade-off
+
+3. Machine Learning Models (GBM, Neural Nets)
+   • Would improve individual-level prediction metrics marginally
+   • Loss of interpretability makes regulatory justification difficult
+   • Pricing segmentation would likely be similar to GLM approach
+
+4. Credibility-Weighted Estimates
+   • Sample sizes for major factors are adequate
+   • Would be appropriate for finer segmentation (e.g., chapter-level Greek data)
+   • Not necessary at current level of granularity
+
+5. Time-Series or Development Patterns
+   • Data is cross-sectional (single point in time)
+   • Multi-year analysis would be valuable for future refinement
+   • Current approach is appropriate given data limitations
+
+================================================================================
+CONCLUSION
+================================================================================
+
+Student renters insurance risk varies substantially across observable 
+characteristics. Greek affiliation and off-campus housing are the strongest 
+risk differentiators, driving 4-5× and 2-2.5× expected loss differentials 
+respectively.
+
+A three-tier pricing structure based on GLM frequency-severity decomposition 
+is sufficient to capture observable risk variation. The approach:
+  • Uses standard actuarial methods
+  • Avoids overfitting to sample-specific patterns
+  • Prioritizes regulatory defensibility
+  • Can be implemented with existing systems
+
+Severity modeling beyond conditional mean is unlikely to improve portfolio-level 
+expected loss estimates. Claim amounts exhibit heavy right tails with limited 
+separability across covariates after frequency adjustment.
+
+High risk is primarily driven by elevated claim frequency rather than extreme 
+severity. This supports pricing and intervention strategies focused on prevention 
+rather than loss cap optimization.
+
+Further refinements should prioritize data collection (building characteristics, 
+multi-year patterns, chapter-level Greek data) over modeling complexity. 
+Additional model complexity yields diminishing returns.
+
+================================================================================

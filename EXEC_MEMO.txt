@@ -1,0 +1,161 @@
+================================================================================
+EXECUTIVE MEMO - STUDENT RENTERS INSURANCE PRICING ANALYSIS
+================================================================================
+
+RECOMMENDATION: Three-tier risk-based pricing structure
+
+DATA: 40,071 exposures | 4.54% claim frequency | $212 mean loss per exposure
+
+================================================================================
+
+FINDING
+
+The loss distribution is zero-inflated and frequency-driven. Risk segmentation 
+is largely explained by a small set of structural covariates. Decile-level 
+calibration indicates that current signals already saturate predictive power. 
+Further model complexity is unlikely to materially improve pricing outcomes.
+
+Risk concentration is substantial: the top 20% of students by predicted risk 
+account for approximately 8× the loss of the bottom 30%. This differential 
+exceeds current pricing structure.
+
+================================================================================
+
+MATERIAL RISK FACTORS
+
+TIER-1 SIGNALS (must anchor pricing):
+  • Greek affiliation: 4-5× expected loss differential vs. non-Greek
+  • Off-campus housing: 2-2.5× differential vs. on-campus
+  • Coverage type: 4× variation (contract structure, not risk characteristic)
+
+TIER-2 SIGNALS (secondary adjustments):
+  • Class year: monotonic but modest effect (5.08% → 3.94% freshman to grad)
+  • GPA: inverse relationship, 1.3× frequency differential
+  • Distance to campus: 1.3× differential, confounded with housing location
+
+Remaining covariates show limited incremental explanatory power after 
+conditioning on Tier-1 factors.
+
+================================================================================
+
+PROPOSED PRICING STRUCTURE
+
+Three-Tier System (validated against actual loss data):
+
+  Low Risk (30%): Base rate
+    Observed: $73 mean loss, 3.3% claim rate
+
+  Medium Risk (50%): Base + 15-25%
+    Observed: $158 mean loss, 4.0% claim rate
+
+  High Risk (20%): Base + 100-150%
+    Observed: $559 mean loss, 7.7% claim rate
+
+Factor-specific adjustments:
+  • Greek affiliation: +75-100%
+  • Off-campus without sprinklers: +50-75%
+  • On-campus housing: -15-20%
+  • Sprinklered building: -8-12%
+
+Final loadings reflect competitive positioning and regulatory constraints.
+
+================================================================================
+
+EXPECTED IMPACT
+
+Loss Ratio: 15-25 percentage point improvement under stable mix assumptions
+
+Portfolio Composition:
+  • Retain 70-80% of current market (low/medium risk students)
+  • Attrition expected in high-risk segments (acceptable by design)
+  • Quarterly monitoring of actual vs. expected mix required
+
+Market Position:
+  • Competitive pricing for majority of student market
+  • Adequate pricing for high-risk exposures
+  • Consider active underwriting limits for top-decile risks
+
+================================================================================
+
+METHODOLOGY
+
+Frequency Model: Logistic regression (claim occurrence probability)
+Severity Model: Conditional mean by segment (not individual prediction)
+Expected Loss: P(claim) × E(amount | claim) for each student
+
+Model Validation:
+  • Predicted portfolio mean: $210.84 vs. actual $212.49 (0.8% difference)
+  • Decile-level R²: 0.98
+  • Calibration saturates at decile level
+
+Rationale for GLM:
+  • Interpretable: coefficient-level regulatory justification
+  • Defensible: standard actuarial practice
+  • Sufficient: captures observable risk variation
+  • Implementable: existing systems and workflows
+
+Additional model complexity yields diminishing returns. Further gains are 
+likely to be noise-fitting rather than risk separation.
+
+================================================================================
+
+KEY INSIGHTS
+
+1. High risk is primarily driven by elevated claim frequency rather than 
+   extreme severity.
+
+2. Frequency-based segmentation captures the majority of loss differentiation.
+
+3. Severity refinement yields limited marginal benefit for tier separation.
+
+4. This supports pricing and intervention strategies focused on prevention 
+   rather than loss cap optimization.
+
+================================================================================
+
+IMPLEMENTATION
+
+Phase 1 (0-3 months): Deploy three-tier structure, file regulatory
+Phase 2 (3-6 months): Monitor tier performance, validate mix assumptions  
+Phase 3 (6-12 months): Evaluate Tier-2 factors, refine if material
+
+Ongoing: Annual re-rating, quarterly portfolio monitoring
+
+================================================================================
+
+RISKS
+
+Regulatory: Greek/GPA factors may face scrutiny
+  → All factors justified by observed loss data; documentation prepared
+
+Competitive: Competitors may underprice high-risk segments
+  → Our pricing reflects actual risk; focus on retaining low/medium tiers
+
+Gaming: Students manipulate risk factors
+  → Key factors are multi-year commitments; limited gaming opportunity
+
+================================================================================
+
+LIMITATIONS
+
+Data: Single-year cross-section; limited building detail
+Model: Severity predictions have high individual variance (expected)
+Scope: Results specific to this portfolio
+
+These limitations do not preclude implementation but bound expectations.
+
+================================================================================
+
+CONCLUSION
+
+Risk variation across observable characteristics is sufficient to justify 
+moving from flat to risk-based pricing. The three-tier structure balances 
+actuarial accuracy with regulatory and operational constraints.
+
+Severity modeling beyond conditional mean is unlikely to improve portfolio-level 
+expected loss estimates. Claim amounts exhibit heavy right tails with limited 
+separability across covariates after frequency adjustment.
+
+Further refinements should prioritize data collection over modeling complexity.
+
+================================================================================
